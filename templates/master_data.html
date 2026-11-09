@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Stammdaten{% endblock %}
+{% block content %}
+<h1>Stammdaten</h1>
+<div class="grid2">
+  <section class="card">
+    <h2>Kategorien</h2>
+    <p class="muted">Das Kürzel wird für neue Artikelnummern verwendet, z. B. WF → WF-0001, WF-0002 …</p>
+    <table class="list">
+      {% for c in cats %}
+      <tr>
+        <td>
+          <form method="post" class="inline-form">
+            <input type="hidden" name="id" value="{{ c.id }}">
+            <input name="name" value="{{ c.name }}">
+            <input name="prefix" value="{{ c.prefix or '' }}" class="prefix" maxlength="6" title="Kürzel für Artikelnummern" placeholder="Kürzel">
+            <button class="btn small" name="action" value="cat_rename">Speichern</button>
+            <button class="btn small" name="action" value="cat_up" title="nach oben">▲</button>
+            <button class="btn small" name="action" value="cat_down" title="nach unten">▼</button>
+            {% if not c.n %}<button class="btn small danger" name="action" value="cat_delete" onclick="return confirm('Kategorie löschen?')">Löschen</button>{% endif %}
+          </form>
+        </td>
+        <td class="r muted">{{ c.n }} Art.</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <form method="post" class="inline-form add">
+      <input name="name" placeholder="Neue Kategorie" required>
+      <input name="prefix" class="prefix" maxlength="6" placeholder="Kürzel">
+      <button class="btn primary" name="action" value="cat_add">Hinzufügen</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Hersteller</h2>
+    <table class="list">
+      {% for m in mfrs %}
+      <tr>
+        <td>
+          <form method="post" class="inline-form">
+            <input type="hidden" name="id" value="{{ m.id }}">
+            <input name="name" value="{{ m.name }}">
+            <button class="btn small" name="action" value="mfr_rename">Umbenennen</button>
+            {% if not m.n %}<button class="btn small danger" name="action" value="mfr_delete" onclick="return confirm('Hersteller löschen?')">Löschen</button>{% endif %}
+          </form>
+        </td>
+        <td class="r muted">{{ m.n }} Art.</td>
+      </tr>
+      {% else %}<tr><td class="muted">Noch keine – werden beim Anlegen von Artikeln automatisch ergänzt.</td></tr>
+      {% endfor %}
+    </table>
+    <form method="post" class="inline-form add">
+      <input name="name" placeholder="Neuer Hersteller" required>
+      <button class="btn primary" name="action" value="mfr_add">Hinzufügen</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Export</h2>
+  <p>Alle Daten als CSV-Dateien zum Öffnen in Excel – Material, Bezugsquellen, alle Bewegungen, Chargen/Haltbarkeit,
+    Geräte, Geräte-Ausgaben, Kategorien, Hersteller – in einer ZIP-Datei.</p>
+  <a class="btn primary" href="{{ url_for('export_all') }}">⭳ Alle Daten herunterladen (CSV)</a>
+</section>
+
+<section class="card">
+  <h2>Datensicherung</h2>
+  <p>Datenbank: <code>{{ db_path }}</code><br>Backup-Ordner: <code>{{ backup_dir }}</code></p>
+  <p class="muted">Beim Start wird automatisch einmal täglich ein Backup erstellt (die letzten 30 werden behalten).</p>
+  <form method="post" action="{{ url_for('make_backup') }}" class="inline-form">
+    <button class="btn primary">Jetzt Backup erstellen</button>
+    <a class="btn" href="{{ url_for('download_backup') }}">Backup herunterladen</a>
+  </form>
+  {% if backups %}<p class="muted">Letzte Backups: {{ backups | join(', ') }}</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,100 @@
+name: Programm bauen (Windows + Mac)
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Abhängigkeiten
+        run: pip install -r requirements.txt pyinstaller
+      - name: Tests
+        run: python test_app.py
+      - name: DillgeLager.exe bauen
+        run: pyinstaller -y lager.spec
+      - name: Test – Start von Netzwerkpfad (wie von der Netzwerkfestplatte)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force C:\nastest | Out-Null
+          New-SmbShare -Name lager -Path C:\nastest -FullAccess Everyone | Out-Null
+          Copy-Item dist\DillgeLager.exe \\localhost\lager\
+          $env:LAGER_NO_BROWSER = "1"
+          $p = Start-Process \\localhost\lager\DillgeLager.exe -PassThru -WindowStyle Hidden
+          python .github/ci_smoke.py http://127.0.0.1:8080
+          Stop-Process -Id $p.Id -Force
+          if (-not (Test-Path \\localhost\lager\data\lager.db)) { throw "Datenbank nicht auf der Freigabe angelegt" }
+          if (Test-Path \\localhost\lager\data\lager.db-wal) { throw "WAL-Modus auf Netzlaufwerk aktiv" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/DillgeLager.exe
+
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest       # Apple-Chip (M1/M2/M3/M4)
+            name: DillgeLager-Mac
+          - runner: macos-15-intel     # ältere Macs mit Intel-Prozessor
+            name: DillgeLager-Mac-Intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Abhängigkeiten
+        run: pip install -r requirements.txt pyinstaller
+      - name: Tests
+        run: python test_app.py
+      - name: Mac-Programm bauen
+        run: LAGER_BUILD_NAME=${{ matrix.name }} pyinstaller -y lager.spec
+      - name: Test – Programm starten
+        run: |
+          mkdir -p /tmp/lagertest && cp dist/${{ matrix.name }} /tmp/lagertest/
+          (cd /tmp/lagertest && LAGER_NO_BROWSER=1 ./${{ matrix.name }} > run.log 2>&1 &)
+          python .github/ci_smoke.py http://127.0.0.1:8080
+          test -f /tmp/lagertest/data/lager.db
+      - name: Verpacken (Ausführungsrecht bleibt erhalten)
+        run: ditto -c -k --keepParent dist/${{ matrix.name }} ${{ matrix.name }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}.zip
+
+  release:
+    # Dauerhafter Download: GitHub-Release "aktuell" wird bei jedem Bau ersetzt
+    needs: [windows, mac]
+    if: ${{ !cancelled() && needs.windows.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefakte
+      - name: Release "aktuell" erneuern
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir paket
+          cp artefakte/windows/DillgeLager.exe paket/
+          cp artefakte/DillgeLager-Mac*/DillgeLager-Mac*.zip paket/ 2>/dev/null || true
+          cp ANLEITUNG.txt paket/
+          gh release delete aktuell --cleanup-tag --yes || true
+          gh release create aktuell paket/* --target "$GITHUB_SHA" --title "Dillge Lager – aktuelle Version" \
+            --notes "Gebaut am $(date +'%d.%m.%Y %H:%M') aus Stand ${GITHUB_SHA::7} (Zweig ${GITHUB_REF_NAME}).
+          - Windows: DillgeLager.exe
+          - Mac mit Apple-Chip (M1/M2/M3/M4): DillgeLager-Mac.zip
+          - Mac mit Intel-Prozessor: DillgeLager-Mac-Intel.zip
+          Einrichten: siehe ANLEITUNG.txt"
+          ls -la paket

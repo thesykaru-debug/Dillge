@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import mtype, signed %}
+{% block title %}Bewegungen{% endblock %}
+{% block content %}
+<h1>Bewegungen</h1>
+<form class="filters" method="get">
+  <label>von <input type="date" name="von" value="{{ start }}"></label>
+  <label>bis <input type="date" name="bis" value="{{ end }}"></label>
+  <select name="type">
+    <option value="">Alle Arten</option>
+    {% for k, v in TYPE_LABELS.items() %}<option value="{{ k }}" {{ 'selected' if a.type == k }}>{{ v }}</option>{% endfor %}
+  </select>
+  <select name="kategorie">
+    <option value="">Alle Kategorien</option>
+    {% for c in cats %}<option value="{{ c.id }}" {{ 'selected' if a.kategorie == c.id|string }}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <input type="search" name="q" value="{{ a.q or '' }}" placeholder="Artikel, Farbton, Name, Baustelle, Notiz">
+  <button class="btn">Filtern</button>
+  <button class="btn" name="export" value="1">CSV</button>
+</form>
+<div class="table-scroll">
+<table class="list zebra">
+  <tr><th>Datum</th><th>Art</th><th>Artikel</th><th class="r">Menge</th><th class="r">Bestand</th>
+      <th class="r">Wert</th><th>Wer</th><th>Baustelle / Quelle</th><th>Notiz</th></tr>
+  {% for m in rows %}
+  <tr>
+    <td class="nowrap">{{ m.created_at | dt }}</td><td>{{ mtype(m.type) }}</td>
+    <td><a href="{{ url_for('article', aid=m.article_id) }}">{{ m.art_nr }}</a> {{ m.name }}{% if m.color %} <span class="muted">· {{ m.color }}</span>{% endif %}</td>
+    <td class="r nowrap">{{ signed(m.qty) }} {{ m.unit }}</td><td class="r">{{ m.stock_after | qty }}</td>
+    <td class="r nowrap">{{ ((m.qty|abs) * m.unit_price) | euro if m.unit_price is not none else '–' }}</td>
+    <td>{{ m.user or '' }}</td>
+    <td>{% if m.site %}<a href="{{ url_for('site', name=m.site) }}">{{ m.site }}</a>{% else %}{{ m.src_mfr or m.src_supplier or '' }}{% endif %}</td>
+    <td>{{ m.note or '' }}</td>
+  </tr>
+  {% else %}<tr><td colspan="9" class="muted">Keine Bewegungen im Zeitraum.</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% if rows | length == 1000 %}<p class="muted">Nur die neuesten 1000 angezeigt – für alles den CSV-Export nutzen.</p>{% endif %}
+{% endblock %}

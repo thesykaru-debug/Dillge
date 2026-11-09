@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Lager{% endblock %} · Dillge Lager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="{{ url_for('dashboard') }}">Dillge <span>Lager</span></a>
+  <nav>
+    {% set ep = request.endpoint %}
+    <a href="{{ url_for('dashboard') }}" class="{{ 'on' if ep == 'dashboard' }}">Übersicht</a>
+    <a href="{{ url_for('articles') }}" class="{{ 'on' if ep in ('articles','article','article_edit','article_new') }}">Material</a>
+    <a href="{{ url_for('booking', type='OUT') }}" class="{{ 'on' if ep == 'booking' }}">Buchen</a>
+    <a href="{{ url_for('devices') }}" class="{{ 'on' if ep in ('devices','device','device_form') }}">Geräte</a>
+    <a href="{{ url_for('sites') }}" class="{{ 'on' if ep in ('sites','site') }}">Baustellen</a>
+    <a href="{{ url_for('movements') }}" class="{{ 'on' if ep == 'movements' }}">Bewegungen</a>
+    <a href="{{ url_for('order_list') }}" class="{{ 'on' if ep == 'order_list' }}">Bestellliste
+      {% if low_count %}<span class="badge">{{ low_count }}</span>{% endif %}</a>
+    <a href="{{ url_for('expiry') }}" class="{{ 'on' if ep == 'expiry' }}">Haltbarkeit
+      {% if expiry_count %}<span class="badge">{{ expiry_count }}</span>{% endif %}</a>
+    <a href="{{ url_for('analysis') }}" class="{{ 'on' if ep == 'analysis' }}">Analyse</a>
+    <a href="{{ url_for('master_data') }}" class="{{ 'on' if ep == 'master_data' }}">Stammdaten</a>
+  </nav>
+  <div class="who">{% if user_name %}👤 {{ user_name }}{% endif %}</div>
+</header>
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

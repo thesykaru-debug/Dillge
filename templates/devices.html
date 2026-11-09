@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import dev_status %}
+{% block title %}Geräte{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Geräte &amp; Werkzeug</h1>
+  <a class="btn primary" href="{{ url_for('device_form') }}">+ Neues Gerät</a>
+</div>
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ search }}" placeholder="Suchen: Inventarnr., Bezeichnung, Person, Baustelle …" autofocus>
+  <select name="filter" onchange="this.form.submit()">
+    <option value="">Alle</option>
+    <option value="lager" {{ 'selected' if flt == 'lager' }}>Nur im Lager</option>
+    <option value="unterwegs" {{ 'selected' if flt == 'unterwegs' }}>Nur ausgegeben</option>
+    <option value="defekt" {{ 'selected' if flt == 'defekt' }}>Defekt / Reparatur</option>
+    <option value="inaktiv" {{ 'selected' if flt == 'inaktiv' }}>Ausgemustert</option>
+  </select>
+  <button class="btn">Suchen</button>
+</form>
+<div class="table-scroll">
+<table class="list zebra">
+  <tr><th></th><th>Inventarnr.</th><th>Bezeichnung</th><th>Kategorie</th><th>Status</th><th>bei / Baustelle</th><th>seit</th><th>zurück bis</th><th></th></tr>
+  {% for dv in rows %}
+  {% set late = dv.due_at and dv.due_at < today() %}
+  <tr class="{{ 'row-leer' if late }}">
+    <td class="thumb">{% if dv.photo %}<img src="{{ url_for('photo', name=dv.photo) }}" alt="">{% endif %}</td>
+    <td><a href="{{ url_for('device', did=dv.id) }}"><b>{{ dv.inv_nr }}</b></a></td>
+    <td>{{ dv.name }}</td><td>{{ dv.category or '' }}</td>
+    <td>{{ dev_status(dv) }}</td>
+    <td>{% if dv.loan_id %}<b>{{ dv.person }}</b>{% if dv.loan_site %} · <a href="{{ url_for('site', name=dv.loan_site) }}">{{ dv.loan_site }}</a>{% endif %}{% else %}<span class="muted">{{ dv.location or '' }}</span>{% endif %}</td>
+    <td class="nowrap">{{ (dv.out_at | dt)[:10] if dv.loan_id }}</td>
+    <td class="nowrap">{% if dv.due_at %}{{ dv.due_at | d }}{% if late %} <span class="pill red">überfällig</span>{% endif %}{% endif %}</td>
+    <td class="nowrap">
+      {% if dv.loan_id %}
+      <form method="post" action="{{ url_for('device_back', did=dv.id) }}" class="inline-form">
+        <input type="hidden" name="back" value="{{ request.full_path }}">
+        <button class="btn small in">Zurück ins Lager</button>
+      </form>
+      {% else %}<a class="btn small out" href="{{ url_for('device', did=dv.id) }}#ausgeben">Ausgeben</a>{% endif %}
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="9" class="muted">Keine Geräte gefunden.</td></tr>
+  {% endfor %}
+</table>
+</div>
+<p class="muted">{{ rows | length }} Geräte</p>
+{% endblock %}

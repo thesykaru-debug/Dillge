@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import mtype, signed %}
+{% block title %}{{ name }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Baustelle: {{ name }}</h1>
+  <div>
+    <a class="btn" href="{{ url_for('site', name=name, export=1) }}">CSV</a>
+    <button class="btn" onclick="window.print()">Drucken</button>
+  </div>
+</div>
+<div class="tiles">
+  <div class="tile"><div class="k">Materialkosten gesamt</div><div class="v">{{ total | euro }}</div><div class="s">Entnahmen minus Rückgaben</div></div>
+  <div class="tile"><div class="k">Buchungen</div><div class="v">{{ moves | length }}</div></div>
+  <div class="tile"><div class="k">Geräte aktuell dort</div><div class="v">{{ loans | selectattr('back_at', 'none') | list | length }}</div></div>
+</div>
+
+<section class="card">
+  <h2>Material (Summe)</h2>
+  <table class="list">
+    <tr><th>Artikel</th><th>Farbton</th><th class="r">Menge netto</th><th class="r">Kosten</th></tr>
+    {% for m in materials %}
+    <tr><td><a href="{{ url_for('article', aid=m.id) }}">{{ m.art_nr }}</a> {{ m.name }}</td><td>{{ m.color or '' }}</td>
+        <td class="r nowrap">{{ m.qty | qty }} {{ m.unit }}</td><td class="r nowrap">{{ m.cost | euro }}</td></tr>
+    {% else %}<tr><td class="muted">Kein Material gebucht.</td></tr>{% endfor %}
+    {% if materials %}<tr><th colspan="3" class="r">Summe</th><th class="r nowrap">{{ total | euro }}</th></tr>{% endif %}
+  </table>
+</section>
+
+<section class="card">
+  <h2>Geräte</h2>
+  <table class="list">
+    <tr><th>Gerät</th><th>bei</th><th>ausgegeben</th><th>zurück</th></tr>
+    {% for l in loans %}
+    <tr><td><a href="{{ url_for('device', did=l.device_id) }}">{{ l.inv_nr }}</a> {{ l.name }}</td><td>{{ l.person }}</td>
+        <td>{{ l.out_at | dt }}</td><td>{% if l.back_at %}{{ l.back_at | dt }}{% else %}<span class="pill blue">noch dort</span>{% endif %}</td></tr>
+    {% else %}<tr><td class="muted">Keine Geräte für diese Baustelle ausgegeben.</td></tr>{% endfor %}
+  </table>
+</section>
+
+<section class="card">
+  <h2>Alle Buchungen</h2>
+  <table class="list zebra">
+    <tr><th>Datum</th><th>Art</th><th>Artikel</th><th class="r">Menge</th><th class="r">Wert</th><th>Wer</th><th>Notiz</th></tr>
+    {% for m in moves %}
+    <tr><td class="nowrap">{{ m.created_at | dt }}</td><td>{{ mtype(m.type) }}</td>
+        <td><a href="{{ url_for('article', aid=m.article_id) }}">{{ m.art_nr }}</a> {{ m.name }}</td>
+        <td class="r nowrap">{{ signed(m.qty) }} {{ m.unit }}</td>
+        <td class="r nowrap">{{ ((m.qty|abs) * m.unit_price) | euro if m.unit_price is not none else '–' }}</td>
+        <td>{{ m.user or '' }}</td><td>{{ m.note or '' }}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

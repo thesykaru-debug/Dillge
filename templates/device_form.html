@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Neues Gerät' if new else 'Gerät bearbeiten' }}{% endblock %}
+{% block content %}
+<h1>{{ 'Neues Gerät' if new else 'Gerät bearbeiten: ' ~ dev.inv_nr }}</h1>
+<form method="post" enctype="multipart/form-data" class="card form">
+  <div class="fgrid">
+    <label>Inventarnr. *<input name="inv_nr" value="{{ dev.inv_nr or '' }}" placeholder="wird automatisch vergeben"></label>
+    <label class="span2">Bezeichnung *<input name="name" value="{{ dev.name or '' }}" required autofocus placeholder="z. B. Airless-Spritzgerät Wagner"></label>
+    <label>Kategorie<input name="category" value="{{ dev.category or '' }}" list="dcats">
+      <datalist id="dcats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist></label>
+    <label>Hersteller<input name="manufacturer" value="{{ dev.manufacturer or '' }}"></label>
+    <label>Seriennr.<input name="serial_nr" value="{{ dev.serial_nr or '' }}"></label>
+    <label>Kaufdatum<input type="date" name="purchase_date" value="{{ dev.purchase_date or '' }}"></label>
+    <label>Kaufpreis €<input name="price" inputmode="decimal" value="{{ ('%.2f' % dev.price).replace('.', ',') if dev.price is number else '' }}"></label>
+    <label>Stammplatz im Lager<input name="location" value="{{ dev.location or '' }}"></label>
+    <label>Zustand
+      <select name="state">{% for k, v in DEVICE_STATES.items() %}<option value="{{ k }}" {{ 'selected' if k == dev.state }}>{{ v }}</option>{% endfor %}</select></label>
+    <label class="span3">Notiz<textarea name="note" rows="2">{{ dev.note or '' }}</textarea></label>
+    <label>Foto<input type="file" name="photo" accept="image/*"></label>
+    {% if dev.photo %}
+    <div><img class="thumb-lg" src="{{ url_for('photo', name=dev.photo) }}" alt=""><br>
+      <label class="inline"><input type="checkbox" name="remove_photo" value="1"> Foto entfernen</label></div>
+    {% endif %}
+  </div>
+  <div class="actions">
+    <button class="btn primary">Speichern</button>
+    {% if new %}<button class="btn" name="next" value="1">Speichern &amp; nächstes Gerät</button>{% endif %}
+    <a class="btn" href="{{ url_for('device', did=dev.id) if not new else url_for('devices') }}">Abbrechen</a>
+  </div>
+</form>
+{% endblock %}

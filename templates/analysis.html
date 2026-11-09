@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import bars %}
+{% block title %}Analyse{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Analyse: {{ label }}</h1>
+  <div class="tabs inline">
+    {% for p, l in [('woche','Woche'),('monat','Monat'),('jahr','Jahr')] %}
+      <a href="{{ url_for('analysis', zeitraum=p) }}" class="{{ 'on' if period == p }}">{{ l }}</a>
+    {% endfor %}
+  </div>
+</div>
+<div class="pager">
+  <a class="btn" href="{{ url_for('analysis', zeitraum=period, datum=prev_ref.isoformat()) }}">← vorher</a>
+  <span class="muted">{{ start.strftime('%d.%m.%Y') }} – {{ end.strftime('%d.%m.%Y') }}</span>
+  <a class="btn" href="{{ url_for('analysis', zeitraum=period, datum=next_ref.isoformat()) }}">weiter →</a>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="k">Materialverbrauch</div><div class="v">{{ totals.cost | euro }}</div><div class="s">Entnahmen minus Rückgaben</div></div>
+  <div class="tile"><div class="k">Einkauf</div><div class="v">{{ totals.in_cost | euro }}</div></div>
+  <div class="tile {{ 'alert' if totals.waste > 0 }}"><div class="k">Entsorgt / Verlust</div><div class="v">{{ totals.waste | euro }}</div></div>
+  <div class="tile"><div class="k">Baustellen mit Material</div><div class="v">{{ totals.sites }}</div><div class="s">{{ totals.n }} Buchungen</div></div>
+</div>
+
+<section class="card">
+  <h2>Verlauf <span class="legend"><i class="lo"></i> Verbrauch <i class="li"></i> Einkauf</span></h2>
+  <div class="timeline">
+    {% for lab, o, i in timeline %}
+    <div class="tcol" title="{{ lab }}: Verbrauch {{ o | euro }}, Einkauf {{ i | euro }}">
+      <div class="tbars"><div class="lo" style="height: {{ (100 * o / tl_max) | round(1) }}%"></div><div class="li" style="height: {{ (100 * i / tl_max) | round(1) }}%"></div></div>
+      <div class="tlab">{{ lab }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="grid2">
+  <section class="card"><h2>Kosten nach Baustelle / Kunde</h2>{{ bars(by_site, link='site') }}</section>
+  <section class="card"><h2>Kosten nach Kategorie</h2>{{ bars(by_cat) }}</section>
+  <section class="card"><h2>Top 10 – höchste Kosten</h2>{{ bars(top_cost, 'cost', 'euro', 'article') }}</section>
+  <section class="card"><h2>Top 10 – meiste Entnahmen (Menge)</h2>{{ bars(top_qty, 'qty', 'qty', 'article') }}</section>
+  <section class="card"><h2>Einkauf nach Hersteller</h2>{{ bars(by_mfr) }}</section>
+  <section class="card"><h2>Entsorgt / Verlust</h2>{{ bars(waste, 'cost', 'euro', 'article') }}</section>
+  <section class="card"><h2>Ladenhüter (Bestand, aber 6 Monate keine Entnahme)</h2>
+    <table class="list">
+      {% for a in slow %}
+      <tr><td><a href="{{ url_for('article', aid=a.id) }}">{{ a.art_nr }}</a> {{ a.name }}</td>
+          <td class="r nowrap">{{ a.stock | qty }} {{ a.unit }}</td><td class="r nowrap">{{ (a.stock * (a.last_price or 0)) | euro }}</td></tr>
+      {% else %}<tr><td class="muted">Keine.</td></tr>{% endfor %}
+    </table>
+  </section>
+</div>
+<p class="muted">Kosten = Menge × Einkaufspreis zum Zeitpunkt der Buchung. Rückgaben von der Baustelle werden abgezogen.</p>
+{% endblock %}

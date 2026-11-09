@@ -1,0 +1,44 @@
+{% macro status(a) -%}
+  {%- set s = status_of(a) -%}
+  {%- if s == 'leer' -%}<span class="pill red">LEER</span>
+  {%- elif s == 'wenig' -%}<span class="pill amber">WENIG</span>
+  {%- else -%}<span class="pill green">OK</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro expiry(date_str) -%}
+  {%- set s = expiry_state(date_str) -%}
+  {%- if date_str -%}
+    {%- if s == 'abgelaufen' -%}<span class="pill red" title="abgelaufen">⚠ {{ date_str | d }}</span>
+    {%- elif s == 'bald' -%}<span class="pill amber" title="läuft bald ab">{{ date_str | d }}</span>
+    {%- else -%}<span class="muted">{{ date_str | d }}</span>{%- endif -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro mtype(t) -%}
+  <span class="mt mt-{{ t }}">{{ TYPE_LABELS[t] }}</span>
+{%- endmacro %}
+
+{% macro signed(x) -%}{{ '+' if x > 0 else '−' }}{{ (x | abs) | qty }}{%- endmacro %}
+
+{% macro dev_status(dv) -%}
+  {%- if dv.loan_id -%}<span class="pill blue">unterwegs</span>
+  {%- elif dv.state == 'defekt' -%}<span class="pill red">defekt</span>
+  {%- elif dv.state == 'reparatur' -%}<span class="pill amber">in Reparatur</span>
+  {%- else -%}<span class="pill green">im Lager</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro bars(rows, key='cost', fmt='euro', link=False) -%}
+  {% set mx = (rows | map(attribute=key) | max) if rows else 0 %}
+  {% if not rows %}<p class="muted">Keine Daten im Zeitraum.</p>{% endif %}
+  <table class="bars">
+  {% for r in rows %}
+    <tr>
+      <td class="lbl">{% if link == 'article' %}<a href="{{ url_for('article', aid=r.id) }}">{{ r.art_nr }}</a> {{ r.name }}
+        {% elif link == 'site' %}<a href="{{ url_for('site', name=r.name) }}">{{ r.name }}</a>
+        {% else %}{{ r.name }}{% endif %}</td>
+      <td class="bar"><div style="width: {{ (100 * (r[key] or 0) / (mx or 1)) | round(1) }}%"></div></td>
+      <td class="val">{% if fmt == 'euro' %}{{ r[key] | euro }}{% else %}{{ r[key] | qty }} {{ r.unit or '' }}{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </table>
+{%- endmacro %}

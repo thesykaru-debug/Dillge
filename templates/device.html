@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import dev_status %}
+{% block title %}{{ dev.inv_nr }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>{{ dev.inv_nr }} – {{ dev.name }} {{ dev_status(dev) }}{% if not dev.active %} <span class="pill grey">ausgemustert</span>{% endif %}</h1>
+  <a class="btn" href="{{ url_for('device_form', did=dev.id) }}">Bearbeiten</a>
+</div>
+
+<div class="grid2">
+  <section class="card">
+    {% if dev.loan_id %}
+    <h2>Ausgegeben</h2>
+    <table class="kv">
+      <tr><th>bei</th><td class="big-num">{{ dev.person }}</td></tr>
+      <tr><th>Baustelle</th><td>{% if dev.loan_site %}<a href="{{ url_for('site', name=dev.loan_site) }}">{{ dev.loan_site }}</a>{% else %}–{% endif %}</td></tr>
+      <tr><th>seit</th><td>{{ dev.out_at | dt }}</td></tr>
+      <tr><th>zurück bis</th><td>{{ dev.due_at | d or '–' }}{% if dev.due_at and dev.due_at < today() %} <span class="pill red">überfällig</span>{% endif %}</td></tr>
+    </table>
+    <form method="post" action="{{ url_for('device_back', did=dev.id) }}" class="form">
+      <div class="fgrid">
+        <label>Zustand bei Rückgabe
+          <select name="state">{% for k, v in DEVICE_STATES.items() %}<option value="{{ k }}" {{ 'selected' if k == dev.state }}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Name<input name="user" value="{{ user_name }}"></label>
+        <label class="span2">Notiz (z. B. „Düse verstopft“)<input name="back_note"></label>
+      </div>
+      <button class="btn big in">Zurück ins Lager</button>
+    </form>
+    {% elif dev.active %}
+    <h2 id="ausgeben">Ausgeben</h2>
+    {% if dev.state != 'ok' %}<div class="flash warn">Achtung: Gerät ist als „{{ DEVICE_STATES[dev.state] }}“ markiert.</div>{% endif %}
+    <form method="post" action="{{ url_for('device_out', did=dev.id) }}" class="form">
+      <div class="fgrid">
+        <label>Wer bekommt es? *<input name="person" list="people" required autofocus autocomplete="off">
+          <datalist id="people">{% for p in people %}<option value="{{ p }}">{% endfor %}</datalist></label>
+        <label>Baustelle (optional)<input name="site" list="sites" autocomplete="off">
+          <datalist id="sites">{% for s in sites %}<option value="{{ s }}">{% endfor %}</datalist></label>
+        <label>Zurück bis (optional)<input type="date" name="due_at"></label>
+        <label>Dein Name *<input name="user" value="{{ user_name }}" required></label>
+        <label class="span2">Notiz<input name="note"></label>
+      </div>
+      <button class="btn big out">Ausgeben</button>
+    </form>
+    {% endif %}
+  </section>
+  <section class="card">
+    {% if dev.photo %}<p class="center"><img class="photo" src="{{ url_for('photo', name=dev.photo) }}" alt=""></p>{% endif %}
+    <table class="kv">
+      <tr><th>Inventarnr.</th><td><b>{{ dev.inv_nr }}</b></td></tr>
+      <tr><th>Kategorie</th><td>{{ dev.category or '–' }}</td></tr>
+      <tr><th>Hersteller</th><td>{{ dev.manufacturer or '–' }}</td></tr>
+      <tr><th>Seriennr.</th><td>{{ dev.serial_nr or '–' }}</td></tr>
+      <tr><th>Kaufdatum / Preis</th><td>{{ dev.purchase_date | d or '–' }} · {{ dev.price | euro }}</td></tr>
+      <tr><th>Stammplatz</th><td>{{ dev.location or '–' }}</td></tr>
+      <tr><th>Zustand</th><td>{{ DEVICE_STATES[dev.state] }}</td></tr>
+      {% if dev.note %}<tr><th>Notiz</th><td class="pre">{{ dev.note }}</td></tr>{% endif %}
+    </table>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Verlauf</h2>
+  <table class="list zebra">
+    <tr><th>ausgegeben</th><th>an</th><th>Baustelle</th><th>zurück</th><th>von / an</th><th>Notizen</th></tr>
+    {% for l in loans %}
+    <tr><td class="nowrap">{{ l.out_at | dt }}</td><td><b>{{ l.person }}</b></td>
+        <td>{% if l.site %}<a href="{{ url_for('site', name=l.site) }}">{{ l.site }}</a>{% endif %}</td>
+        <td class="nowrap">{% if l.back_at %}{{ l.back_at | dt }}{% else %}<span class="pill blue">noch unterwegs</span>{% endif %}</td>
+        <td class="muted">{{ l.out_user or '' }}{% if l.back_user %} / {{ l.back_user }}{% endif %}</td>
+        <td>{{ l.note or '' }}{% if l.back_note %}{% if l.note %} · {% endif %}{{ l.back_note }}{% endif %}</td></tr>
+    {% else %}<tr><td colspan="6" class="muted">Noch nie ausgegeben.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+
+<form method="post" action="{{ url_for('device_toggle', did=dev.id) }}" class="danger-zone"
+      onsubmit="return confirm('{{ 'Gerät ausmustern? (Verlauf bleibt erhalten)' if dev.active else 'Gerät wieder aktivieren?' }}')">
+  <button class="btn {{ 'danger' if dev.active }}">{{ 'Gerät ausmustern' if dev.active else 'Wieder aktivieren' }}</button>
+</form>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import status, expiry %}
+{% block title %}Material{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Material</h1>
+  <div>
+    <a class="btn" href="{{ url_for('export_articles') }}">CSV</a>
+    <a class="btn primary" href="{{ url_for('article_new', kategorie=cat) }}">+ Neuer Artikel</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ search }}" placeholder="Suchen: Nr., Bezeichnung, Farbton, Hersteller, Lagerort …" autofocus>
+  <select name="kategorie" onchange="this.form.submit()">
+    <option value="">Alle Kategorien</option>
+    {% for c in cats %}<option value="{{ c.id }}" {{ 'selected' if c.id == cat }}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <select name="filter" onchange="this.form.submit()">
+    <option value="">Alle aktiven</option>
+    <option value="wenig" {{ 'selected' if flt == 'wenig' }}>Nur wenig / leer</option>
+    <option value="inaktiv" {{ 'selected' if flt == 'inaktiv' }}>Archivierte</option>
+  </select>
+  <button class="btn">Suchen</button>
+</form>
+
+<div class="chips">
+  <a href="{{ url_for('articles', q=search, filter=flt) }}" class="{{ 'on' if not cat }}">Alle</a>
+  {% for c in cats %}<a href="{{ url_for('articles', kategorie=c.id, q=search, filter=flt) }}" class="{{ 'on' if c.id == cat }}">{{ c.name }}</a>{% endfor %}
+</div>
+
+<div class="table-scroll">
+<table class="list zebra">
+  <tr><th></th><th>Artikelnr.</th><th>Bezeichnung</th><th>Farbton</th><th>Gebinde</th><th>Hersteller (Haupt)</th><th>Lagerort</th>
+      <th class="r">Bestand</th><th class="r">Min.</th><th class="r">Letzter EK</th><th>Ablauf</th><th>Status</th><th></th></tr>
+  {% for a in rows %}
+  <tr class="row-{{ status_of(a) }}">
+    <td class="thumb">{% if a.photo %}<img src="{{ url_for('photo', name=a.photo) }}" alt="">{% endif %}</td>
+    <td><a href="{{ url_for('article', aid=a.id) }}"><b>{{ a.art_nr }}</b></a></td>
+    <td>{{ a.name }}<br><span class="muted small">{{ a.category or '' }}</span></td>
+    <td>{{ a.color or '' }}</td>
+    <td>{{ a.pack_size or '' }}</td>
+    <td>{{ a.manufacturer or a.src_supplier or '' }}{% if a.n_sources > 1 %} <span class="muted">+{{ a.n_sources - 1 }}</span>{% endif %}</td>
+    <td>{{ a.location or '' }}</td>
+    <td class="r nowrap"><b>{{ a.stock | qty }}</b> {{ a.unit }}</td>
+    <td class="r">{{ a.min_stock | qty }}</td>
+    <td class="r nowrap">{{ a.last_price | euro }}</td>
+    <td class="nowrap">{{ expiry(a.next_expiry) }}</td>
+    <td>{{ status(a) }}</td>
+    <td class="nowrap">
+      <a class="btn small out" title="Entnahme" href="{{ url_for('booking', type='OUT', artikel=a.id) }}">−</a>
+      <a class="btn small ret" title="Rückgabe" href="{{ url_for('booking', type='RET', artikel=a.id) }}">↩</a>
+      <a class="btn small in" title="Eingang" href="{{ url_for('booking', type='IN', artikel=a.id) }}">+</a>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="13" class="muted">Keine Artikel gefunden.</td></tr>
+  {% endfor %}
+</table>
+</div>
+<p class="muted">{{ rows | length }} Artikel</p>
+{% endblock %}

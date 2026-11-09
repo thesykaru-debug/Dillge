@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import expiry %}
+{% block title %}Haltbarkeit{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Haltbarkeit {{ '– alle Chargen mit Ablaufdatum' if show_all else '– abgelaufen oder läuft in ' ~ WARN_DAYS ~ ' Tagen ab' }}</h1>
+  <div>
+    {% if show_all %}<a class="btn" href="{{ url_for('expiry') }}">Nur Meldungen</a>
+    {% else %}<a class="btn" href="{{ url_for('expiry', alle=1) }}">Alle Chargen mit Ablaufdatum</a>{% endif %}
+    <button class="btn" onclick="window.print()">Drucken</button>
+  </div>
+</div>
+<div class="table-scroll">
+<table class="list zebra">
+  <tr><th>Haltbar bis</th><th>Artikelnr.</th><th>Bezeichnung</th><th>Farbton</th><th>Chargennr.</th><th>Lagerort</th>
+      <th class="r">Menge</th><th class="r">Wert</th><th class="noprint"></th></tr>
+  {% for l in rows %}
+  <tr class="{{ 'row-leer' if expiry_state(l.expires) == 'abgelaufen' else 'row-wenig' if expiry_state(l.expires) == 'bald' }}">
+    <td class="nowrap">{{ expiry(l.expires) }}</td>
+    <td><a href="{{ url_for('article', aid=l.article_id) }}"><b>{{ l.art_nr }}</b></a></td>
+    <td>{{ l.name }}</td><td>{{ l.color or '' }}</td><td>{{ l.lot_nr or '' }}</td><td>{{ l.location or '' }}</td>
+    <td class="r nowrap"><b>{{ l.qty | qty }}</b> {{ l.unit }}</td>
+    <td class="r nowrap">{{ (l.qty * (l.last_price or 0)) | euro }}</td>
+    <td class="noprint nowrap">
+      <a class="btn small out" href="{{ url_for('booking', type='OUT', artikel=l.article_id, charge=l.id) }}" title="Diese Charge zuerst verbrauchen">Entnahme</a>
+      {% if expiry_state(l.expires) == 'abgelaufen' %}<a class="btn small danger" href="{{ url_for('booking', type='WASTE', artikel=l.article_id, charge=l.id) }}">Entsorgen</a>{% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" class="muted">Nichts abgelaufen und nichts läuft demnächst ab. 👍</td></tr>
+  {% endfor %}
+</table>
+</div>
+<p class="muted">Das Ablaufdatum wird beim Wareneingang eingetragen (oder nachträglich beim Artikel unter „Bestand nach Charge“).
+  Bei Entnahmen wird automatisch zuerst die Ware verwendet, die am frühesten abläuft.</p>
+{% endblock %}

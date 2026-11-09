@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Neuer Artikel' if new else 'Artikel bearbeiten' }}{% endblock %}
+{% macro price_de(v) %}{{ ('%.2f' % v).replace('.', ',') if v is number else '' }}{% endmacro %}
+{% macro qty_de(v) %}{{ (v | qty_in) if v is number else '' }}{% endmacro %}
+{% macro src_row(s, i) %}
+  <tr class="src-row">
+    <td class="c"><input type="radio" name="src_preferred" value="{{ i }}" {{ 'checked' if s.preferred }} title="Hauptbezugsquelle"></td>
+    <td><input type="hidden" name="src_id" value="{{ s.id or '' }}">
+        <input name="src_mfr" list="mfrs" value="{{ s.manufacturer or '' }}" placeholder="z. B. Brillux"></td>
+    <td><input name="src_name" value="{{ s.designation or '' }}" placeholder="Bezeichnung beim Hersteller"></td>
+    <td><input name="src_nr" value="{{ s.mfr_art_nr or '' }}" placeholder="Bestellnummer"></td>
+    <td><input name="src_supplier" value="{{ s.supplier or '' }}" placeholder="Händler (falls anders)"></td>
+    <td><input name="src_price" inputmode="decimal" class="price" value="{{ price_de(s.last_price) }}" placeholder="0,00"></td>
+    <td><button type="button" class="btn small danger" onclick="removeSrc(this)" title="Bezugsquelle entfernen">✕</button></td>
+  </tr>
+{% endmacro %}
+{% block content %}
+<h1>{{ 'Neuer Artikel' if new else 'Artikel bearbeiten: ' ~ art.art_nr }}</h1>
+<form method="post" enctype="multipart/form-data" class="card form">
+  <h2>Artikel</h2>
+  <div class="fgrid">
+    <label>Kategorie
+      <select name="category_id" id="category" {{ 'autofocus' if new and not art.category_id }}>
+        <option value="">–</option>
+        {% for c in cats %}<option value="{{ c.id }}" {{ 'selected' if c.id == art.category_id }}>{{ c.name }}{% if c.prefix %} ({{ c.prefix }}){% endif %}</option>{% endfor %}
+      </select></label>
+    <label>Unsere Artikelnr. *<input name="art_nr" id="art_nr" value="{{ art.art_nr or '' }}" placeholder="wird automatisch vergeben"></label>
+    <label class="span2">Bezeichnung (bei uns) *<input name="name" value="{{ art.name or '' }}" required
+           {{ 'autofocus' if new and art.category_id }} placeholder="z. B. Innenfarbe weiß matt"></label>
+    <label>Farbton<input name="color" value="{{ art.color or '' }}" placeholder="z. B. RAL 9010, NCS S 0502-Y"></label>
+    <label>Gebinde<input name="pack_size" value="{{ art.pack_size or '' }}" placeholder="z. B. 12,5 l, 25 kg, 50 m"></label>
+    <label>Einheit (gezählt wird in …)
+      <input name="unit" value="{{ art.unit or 'Eimer' }}" list="units" required>
+      <datalist id="units">{% for u in units %}<option value="{{ u }}">{% endfor %}</datalist></label>
+    <label>Lagerort<input name="location" value="{{ art.location or '' }}" placeholder="z. B. Regal 3 / oben"></label>
+    <label>Meldebestand (Warnung ab)<input name="min_stock" inputmode="decimal" value="{{ qty_de(art.min_stock) or 0 }}"></label>
+    {% if new %}
+    <label>Anfangsbestand<input name="stock" inputmode="decimal" value="{{ qty_de(start.stock) or 0 }}" placeholder="z. B. 3 oder 2,5"></label>
+    <label>Ablaufdatum (Anfangsbestand)<input type="date" name="expires" value="{{ start.expires or '' }}"></label>
+    <label>Chargennr. (Anfangsbestand)<input name="lot_nr" value="{{ start.lot_nr or '' }}"></label>
+    {% endif %}
+    <label class="span3">Beschreibung / Verarbeitung / Bemerkung<textarea name="description" rows="2">{{ art.description or '' }}</textarea></label>
+    <label>Foto<input type="file" name="photo" accept="image/*"></label>
+    {% if art.photo %}
+    <div><img class="thumb-lg" src="{{ url_for('photo', name=art.photo) }}" alt=""><br>
+      <label class="inline"><input type="checkbox" name="remove_photo" value="1"> Foto entfernen</label></div>
+    {% endif %}
+  </div>
+
+  <h2>Bezugsquellen <span class="muted small">– Hersteller/Lieferanten, jeder mit eigener Bezeichnung, Nummer und Preis</span></h2>
+  <datalist id="mfrs">{% for m in mfrs %}<option value="{{ m.name }}">{% endfor %}</datalist>
+  <div class="table-scroll">
+  <table class="src-table">
+    <thead><tr><th title="Hauptbezugsquelle">Haupt</th><th>Hersteller</th><th>Bezeichnung beim Hersteller</th>
+      <th>Bestell-/Artikelnr.</th><th>Lieferant</th><th>Preis € / Einheit</th><th></th></tr></thead>
+    <tbody id="src-body">
+      {% for s in sources %}{{ src_row(s, loop.index0) }}{% endfor %}
+      {% if not sources %}{{ src_row({'preferred': 1}, 0) }}{% endif %}
+    </tbody>
+  </table>
+  </div>
+  <template id="src-tpl">{{ src_row({}, '__I__') }}</template>
+  <p><button type="button" class="btn small" onclick="addSrc()">+ weitere Bezugsquelle</button></p>
+  <p class="muted">Preise beziehen sich auf die Einheit (z. B. pro Eimer) und werden bei jedem Wareneingang aktualisiert.
+    Der Bestand wird nicht hier geändert, sondern über Buchungen – so bleibt alles nachvollziehbar.</p>
+
+  <div class="actions">
+    <button class="btn primary">Speichern</button>
+    {% if new %}<button class="btn" name="next" value="1">Speichern &amp; nächsten Artikel anlegen</button>{% endif %}
+    <a class="btn" href="{{ url_for('article', aid=art.id) if not new else url_for('articles') }}">Abbrechen</a>
+  </div>
+</form>
+
+<script>
+function renumber() {
+  document.querySelectorAll('#src-body .src-row input[type=radio]').forEach((r, i) => r.value = i);
+}
+function addSrc() {
+  const body = document.getElementById('src-body');
+  const html = document.getElementById('src-tpl').innerHTML.replace('__I__', body.children.length);
+  body.insertAdjacentHTML('beforeend', html);
+  if (!body.querySelector('input[type=radio]:checked')) body.querySelector('input[type=radio]').checked = true;
+  body.lastElementChild.querySelector('input[name=src_mfr]').focus();
+}
+function removeSrc(btn) {
+  const body = document.getElementById('src-body');
+  const row = btn.closest('tr');
+  if (body.children.length === 1) { row.querySelectorAll('input:not([type=radio])').forEach(i => i.value = ''); return; }
+  const wasMain = row.querySelector('input[type=radio]').checked;
+  row.remove();
+  if (wasMain) body.querySelector('input[type=radio]').checked = true;
+  renumber();
+}
+{% if new %}
+(function () {  // Artikelnummer passend zur Kategorie vorschlagen
+  const cat = document.getElementById('category'), nr = document.getElementById('art_nr');
+  let suggested = nr.value;
+  cat.addEventListener('change', async () => {
+    if (nr.value && nr.value !== suggested) return;
+    const r = await fetch('{{ url_for('api_next_nr') }}?kategorie=' + cat.value);
+    suggested = (await r.json()).art_nr;
+    nr.value = suggested;
+  });
+})();
+{% endif %}
+</script>
+{% endblock %}

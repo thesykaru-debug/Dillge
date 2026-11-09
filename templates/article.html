@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import status, mtype, signed, expiry %}
+{% block title %}{{ art.art_nr }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>{{ art.art_nr }} – {{ art.name }} {{ status(art) }}{% if not art.active %} <span class="pill grey">archiviert</span>{% endif %}</h1>
+  <div>
+    <a class="btn out" href="{{ url_for('booking', type='OUT', artikel=art.id) }}">− Entnahme</a>
+    <a class="btn ret" href="{{ url_for('booking', type='RET', artikel=art.id) }}">↩ Rückgabe</a>
+    <a class="btn in" href="{{ url_for('booking', type='IN', artikel=art.id) }}">+ Eingang</a>
+    <a class="btn" href="{{ url_for('booking', type='WASTE', artikel=art.id) }}">Entsorgen</a>
+    <a class="btn" href="{{ url_for('booking', type='CORR', artikel=art.id) }}">Inventur</a>
+    <a class="btn" href="{{ url_for('article_edit', aid=art.id) }}">Bearbeiten</a>
+  </div>
+</div>
+
+<div class="grid2">
+  <section class="card">
+    <table class="kv">
+      <tr><th>Unsere Artikelnr.</th><td><b>{{ art.art_nr }}</b></td></tr>
+      <tr><th>Bezeichnung</th><td>{{ art.name }}</td></tr>
+      <tr><th>Kategorie</th><td>{{ art.category or '–' }}</td></tr>
+      <tr><th>Farbton</th><td>{{ art.color or '–' }}</td></tr>
+      <tr><th>Gebinde</th><td>{{ art.pack_size or '–' }}</td></tr>
+      <tr><th>Lagerort</th><td>{{ art.location or '–' }}</td></tr>
+      <tr><th>Bestand</th><td class="big-num">{{ art.stock | qty }} {{ art.unit }}</td></tr>
+      <tr><th>Meldebestand</th><td>{{ art.min_stock | qty }} {{ art.unit }}</td></tr>
+      <tr><th>Letzter EK</th><td>{{ art.last_price | euro }} / {{ art.unit }}</td></tr>
+      <tr><th>Lagerwert</th><td>{{ (art.stock * (art.last_price or 0)) | euro }}</td></tr>
+      <tr><th>Verbrauch lfd. Jahr</th><td>{{ usage.qty | qty }} {{ art.unit }} · {{ usage.cost | euro }}</td></tr>
+      {% if art.description %}<tr><th>Beschreibung</th><td class="pre">{{ art.description }}</td></tr>{% endif %}
+      <tr><th>Angelegt / geändert</th><td class="muted">{{ art.created_at | dt }} / {{ art.updated_at | dt }}</td></tr>
+    </table>
+  </section>
+  <section class="card center">
+    {% if art.photo %}
+      <a href="{{ url_for('photo', name=art.photo) }}" target="_blank"><img class="photo" src="{{ url_for('photo', name=art.photo) }}" alt="Foto"></a>
+    {% else %}
+      <div class="nophoto">Kein Foto<br><a href="{{ url_for('article_edit', aid=art.id) }}">Foto hinzufügen</a></div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Bestand nach Charge / Haltbarkeit</h2>
+  <table class="list">
+    <tr><th>Ablaufdatum</th><th>Chargennr.</th><th class="r">Menge</th><th>eingegangen</th><th>ändern</th><th></th></tr>
+    {% for l in lots %}
+    <tr>
+      <td>{{ expiry(l.expires) or '–' }}</td><td>{{ l.lot_nr or '–' }}</td>
+      <td class="r"><b>{{ l.qty | qty }}</b> {{ art.unit }}</td>
+      <td class="muted">{{ l.created_at | dt }}</td>
+      <td>
+        <form method="post" action="{{ url_for('lot_edit', lid=l.id) }}" class="inline-form">
+          <input type="date" name="expires" value="{{ l.expires or '' }}" title="Ablaufdatum">
+          <input name="lot_nr" value="{{ l.lot_nr or '' }}" placeholder="Chargennr." class="short">
+          <button class="btn small">Speichern</button>
+        </form>
+      </td>
+      <td>{% if expiry_state(l.expires) == 'abgelaufen' %}<a class="btn small danger" href="{{ url_for('booking', type='WASTE', artikel=art.id, charge=l.id) }}">Entsorgen</a>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="muted">Kein Bestand.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section class="card">
+  <h2>Bezugsquellen <a class="btn small" href="{{ url_for('article_edit', aid=art.id) }}">bearbeiten</a></h2>
+  <table class="list">
+    <tr><th></th><th>Hersteller</th><th>Bezeichnung beim Hersteller</th><th>Bestell-/Artikelnr.</th><th>Lieferant</th>
+        <th class="r">Letzter Preis</th><th>vom</th><th></th></tr>
+    {% for s in sources %}
+    <tr>
+      <td>{% if s.preferred %}<span class="pill green">Haupt</span>{% endif %}</td>
+      <td><b>{{ s.manufacturer or '–' }}</b></td><td>{{ s.designation or '' }}</td><td>{{ s.mfr_art_nr or '' }}</td>
+      <td>{{ s.supplier or '' }}</td><td class="r">{{ s.last_price | euro }}</td>
+      <td class="muted">{{ (s.last_price_at | dt)[:10] }}</td>
+      <td><a class="btn small in" href="{{ url_for('booking', type='IN', artikel=art.id, quelle=s.id) }}">+ Eingang</a></td>
+    </tr>
+    {% else %}<tr><td colspan="8" class="muted">Noch keine Bezugsquelle hinterlegt.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section class="card">
+  <h2>Verlauf</h2>
+  <div class="table-scroll">
+  <table class="list zebra">
+    <tr><th>Datum</th><th>Art</th><th class="r">Menge</th><th class="r">Bestand danach</th><th class="r">Preis</th><th>Wer</th><th>Baustelle / Quelle</th><th>Notiz</th></tr>
+    {% for m in moves %}
+    <tr>
+      <td class="nowrap">{{ m.created_at | dt }}</td><td>{{ mtype(m.type) }}</td>
+      <td class="r nowrap">{{ signed(m.qty) }}</td><td class="r">{{ m.stock_after | qty }}</td>
+      <td class="r nowrap">{{ m.unit_price | euro }}</td><td>{{ m.user or '' }}</td>
+      <td>{% if m.site %}<a href="{{ url_for('site', name=m.site) }}">{{ m.site }}</a>{% else %}{{ m.src_mfr or m.src_supplier or '' }}{% endif %}</td>
+      <td>{{ m.note or '' }}</td>
+    </tr>
+    {% else %}<tr><td colspan="8" class="muted">Noch keine Bewegungen.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</section>
+
+<form method="post" action="{{ url_for('article_toggle', aid=art.id) }}" class="danger-zone"
+      onsubmit="return confirm('{{ 'Artikel archivieren? (Verlauf bleibt erhalten)' if art.active else 'Artikel wieder aktivieren?' }}')">
+  <button class="btn {{ 'danger' if art.active }}">{{ 'Artikel archivieren' if art.active else 'Wieder aktivieren' }}</button>
+</form>
+{% endblock %}

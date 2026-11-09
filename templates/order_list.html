@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import status %}
+{% block title %}Bestellliste{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Bestellliste – wenig oder leer</h1>
+  <div>
+    <a class="btn" href="{{ url_for('order_list', export=1) }}">CSV</a>
+    <button class="btn" onclick="window.print()">Drucken</button>
+  </div>
+</div>
+<div class="table-scroll">
+<table class="list zebra">
+  <tr><th>Status</th><th>Artikelnr.</th><th>Bezeichnung</th><th>Farbton</th><th>Gebinde</th>
+      <th class="r">Bestand</th><th class="r">Min.</th><th>Bezugsquellen (Hersteller · Bezeichnung · Nr. · Lieferant · Preis)</th><th class="noprint"></th></tr>
+  {% for a in rows %}
+  <tr class="row-{{ status_of(a) }}">
+    <td>{{ status(a) }}</td>
+    <td><a href="{{ url_for('article', aid=a.id) }}"><b>{{ a.art_nr }}</b></a></td>
+    <td>{{ a.name }}</td><td>{{ a.color or '' }}</td><td>{{ a.pack_size or '' }}</td>
+    <td class="r nowrap"><b>{{ a.stock | qty }}</b> {{ a.unit }}</td><td class="r">{{ a.min_stock | qty }}</td>
+    <td class="srcs">
+      {% for s in srcs.get(a.id, []) %}
+      <div>{% if s.preferred and srcs[a.id] | length > 1 %}★ {% endif %}<b>{{ s.manufacturer or '' }}</b>
+        {{ s.designation or '' }} <span class="muted">{{ s.mfr_art_nr or '' }}</span>
+        {% if s.supplier %}· {{ s.supplier }}{% endif %} · {{ s.last_price | euro }}</div>
+      {% else %}<span class="muted">–</span>{% endfor %}
+    </td>
+    <td class="noprint"><a class="btn small in" href="{{ url_for('booking', type='IN', artikel=a.id) }}">+ Eingang</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" class="muted">Alles ausreichend auf Lager. 👍</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

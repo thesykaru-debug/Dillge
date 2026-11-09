@@ -1,0 +1,73 @@
+DILLGE LAGER - ANLEITUNG
+========================
+
+Ein Programm für Material, Geräte und Baustellen. Es liegt in EINEM Ordner auf der
+Netzwerkfestplatte. Jeder Rechner (Windows oder Mac) startet es von dort, alle arbeiten
+mit denselben Daten. Auf den Rechnern und auf der Festplatte wird nichts installiert.
+
+
+1. EINRICHTEN (einmalig)
+------------------------
+1. Auf der Netzwerkfestplatte einen eigenen Ordner anlegen, z. B. "Lager".
+   Alle Rechner, die das Lager benutzen, brauchen dort Lese- UND Schreibrecht.
+2. Die passenden Programmdateien in diesen Ordner kopieren:
+     DillgeLager.exe            für Windows
+     DillgeLager-Mac            für Macs mit Apple-Chip (M1, M2, M3, M4)
+     DillgeLager-Mac-Intel      für ältere Macs mit Intel-Prozessor
+   (Die Mac-Dateien kommen als .zip - vorher doppelklicken zum Entpacken.)
+   Welcher Mac? Apfel-Menü -> "Über diesen Mac" -> steht dort "Chip Apple M..."
+   oder "Prozessor Intel ...".
+   Alle Programmdateien liegen im SELBEN Ordner, dann teilen sich alle dieselben Daten.
+3. Beim ersten Start legt das Programm daneben den Ordner "data" an.
+   Darin liegt alles: Datenbank (lager.db), Fotos, tägliche Backups.
+   Diesen Ordner NICHT umbenennen, verschieben oder von Hand ändern.
+
+
+2. WINDOWS
+----------
+- Vor dem Kopieren: Rechtsklick auf die heruntergeladene DillgeLager.exe ->
+  Eigenschaften -> unten "Zulassen" anhaken -> OK.
+- Verknüpfung auf den Desktop: Rechtsklick auf DillgeLager.exe im Lager-Ordner ->
+  "Weitere Optionen" -> "Verknüpfung erstellen", Verknüpfung auf den Desktop ziehen.
+- Fragt Windows "Der Computer wurde durch Windows geschützt":
+  "Weitere Informationen" -> "Trotzdem ausführen".
+
+
+3. MAC
+------
+- Netzwerkfestplatte verbinden: Finder -> Menü "Gehe zu" -> "Mit Server verbinden" ->
+  smb://NAME-ODER-IP-DER-FESTPLATTE  -> Ordner auswählen.
+  Tipp: Systemeinstellungen -> Allgemein -> Anmeldeobjekte: den Ordner hinzufügen,
+  dann verbindet der Mac ihn automatisch beim Anmelden.
+- Erster Start: Im Lager-Ordner auf DillgeLager-Mac doppelklicken.
+  Meldet der Mac "kann nicht geöffnet werden, da der Entwickler nicht verifiziert ist":
+    Systemeinstellungen -> Datenschutz & Sicherheit -> ganz unten bei
+    "DillgeLager-Mac wurde blockiert" auf "Dennoch öffnen" klicken, dann erneut starten.
+  Das ist nur einmal pro Mac nötig.
+  Hilft das nicht: Programm "Terminal" öffnen, eingeben (Leerzeichen am Ende!)
+      xattr -c 
+  dann die Datei DillgeLager-Mac ins Terminal-Fenster ziehen und Enter drücken.
+- Für den Dock: Datei mit gedrückter cmd+alt-Taste in den Dock ziehen (Alias).
+
+
+4. BENUTZEN
+-----------
+- Programm starten: Es öffnet sich ein Fenster mit Text (Windows: schwarz,
+  Mac: Terminal) und der Browser mit dem Lager.
+- Das Text-Fenster offen lassen, solange das Lager benutzt wird.
+  Fenster schließen = Lager auf diesem Rechner beenden.
+- Wird das Programm doppelt gestartet, öffnet es einfach nur den Browser.
+
+
+5. DATENSICHERUNG
+-----------------
+- Automatisch: einmal täglich ein Backup in data\backups (die letzten 30 bleiben).
+- Zusätzlich empfohlen: den Ordner "Lager" regelmäßig mit der Backup-Funktion der
+  Netzwerkfestplatte auf eine externe Festplatte sichern.
+- Alle Daten als CSV für Excel: Button "Alle Daten (CSV)" auf der Übersicht.
+
+
+6. UPDATE
+---------
+Programm auf allen Rechnern schließen, neue Programmdateien über die alten kopieren.
+Der Ordner "data" bleibt unverändert, alle Daten bleiben erhalten.

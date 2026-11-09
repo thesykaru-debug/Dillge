@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Baustellen{% endblock %}
+{% block content %}
+<h1>Baustellen / Kunden</h1>
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ search }}" placeholder="Baustelle oder Kunde suchen …" autofocus>
+  <button class="btn">Suchen</button>
+</form>
+<table class="list zebra">
+  <tr><th>Baustelle / Kunde</th><th class="r">Materialkosten</th><th class="r">Buchungen</th><th>Geräte dort</th><th>erste Buchung</th><th>letzte Buchung</th></tr>
+  {% for s in rows %}
+  <tr>
+    <td><a href="{{ url_for('site', name=s.name) }}"><b>{{ s.name }}</b></a></td>
+    <td class="r nowrap">{{ s.cost | euro }}</td><td class="r">{{ s.n }}</td>
+    <td>{% if devices_out.get(s.name) %}<span class="pill blue">{{ devices_out[s.name] }}</span>{% endif %}</td>
+    <td class="muted">{{ s.first | dt }}</td><td class="muted">{{ s.last | dt }}</td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="muted">Noch keine Buchungen mit Baustelle. Bei Entnahme/Rückgabe einfach eine Baustelle eintragen.</td></tr>
+  {% endfor %}
+</table>
+<p class="muted">Materialkosten = Entnahmen minus Rückgaben, jeweils mit dem Einkaufspreis zum Zeitpunkt der Buchung.</p>
+{% endblock %}
